@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Examen</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f2f1ee;
+      --surface:   #ffffff;
+      --surface2:  #ebe9e5;
+      --border:    #d8d5d0;
+      --border2:   #b8b4ae;
+      --text:      #1c1a17;
+      --text2:     #54524e;
+      --text3:     #96938e;
+
+      --ok:        #2d7a50;
+      --ok-bg:     #d8f0e4;
+      --ok-border: #a8dbc0;
+
+      --warn:      #8c5e1a;
+      --warn-bg:   #fcefd8;
+      --warn-border:#e8c888;
+
+      --danger:    #9e2a2a;
+      --danger-bg: #fde0e0;
+      --danger-border:#e8a8a8;
+
+      --info:      #1e5c9e;
+      --info-bg:   #d8eaf8;
+      --info-border:#88b8e8;
+
+      --cut:       #6b3d9e;
+      --cut-bg:    #ead8f8;
+      --cut-border:#c088e0;
+
+      --blank:     #3d6b7a;
+      --blank-bg:  #d8edf2;
+      --blank-border:#88c4d8;
+
+      --unset:     #7a5c1e;
+      --unset-bg:  #fef3d8;
+      --unset-border:#e8c96a;
+
+      --radius:    4px;
+      --radius-lg: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 80px;
+    }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 40px;
+      background: var(--surface);
+    }
+    .tab-btn {
+      padding: 9px 22px;
+      border: none; background: transparent;
+      color: var(--text3);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+      border-right: 1px solid var(--border);
+    }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: var(--text); color: var(--bg); }
+    .tab-btn:hover:not(.active) { background: var(--surface2); color: var(--text2); }
+
+    /* ── Pages ── */
+    .page { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 700px; }
+    .page.active { display: flex; }
+
+    /* ── Page header ── */
+    .page-header {
+      width: 100%;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .page-header-left h1 {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 300; font-size: 1.5rem;
+      letter-spacing: -0.02em; color: var(--text);
+    }
+    .page-header-left p {
+      margin-top: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.66rem; color: var(--text3); letter-spacing: 0.04em;
+    }
+    .save-btn {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text3);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      margin-top: 2px;
+    }
+    .save-btn:hover { border-color: var(--info); color: var(--info); background: var(--info-bg); }
+    .save-btn svg { width: 15px; height: 15px; }
+
+    /* ── Penalty + controls top row ── */
+    .top-row {
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .penalty-bar { display: flex; gap: 6px; }
+    .pen-btn {
+      padding: 4px 11px;
+      border: 1px solid var(--border2); border-radius: var(--radius);
+      background: var(--surface); color: var(--text3);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.63rem; letter-spacing: 0.04em;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .pen-btn:hover { border-color: var(--text3); color: var(--text2); }
+    .pen-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+    /* ── Controls row ── */
+    .controls {
+      display: flex; gap: 10px; width: 100%; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .ctrl-item {
+      display: flex; flex-direction: column; gap: 5px;
+      flex: 1; min-width: 110px;
+    }
+    .ctrl-item label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3);
+    }
+    .counter {
+      display: flex; border: 1px solid var(--border2);
+      border-radius: var(--radius); overflow: hidden; background: var(--surface);
+    }
+    .counter button {
+      width: 32px; height: 34px; background: transparent; border: none;
+      color: var(--text3); font-size: 1rem; font-family: 'IBM Plex Mono', monospace;
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .counter button:hover { background: var(--surface2); color: var(--text); }
+    .counter input {
+      flex: 1; min-width: 0; height: 34px; text-align: center;
+      font-size: 0.88rem; font-family: 'IBM Plex Mono', monospace; font-weight: 500;
+      color: var(--text); background: transparent; border: none;
+      border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+      outline: none; -moz-appearance: textfield;
+    }
+    .counter input::-webkit-outer-spin-button,
+    .counter input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .counter input:focus { background: var(--surface2); }
+    .counter-blank {
+      border-color: var(--unset-border) !important;
+      background: var(--unset-bg) !important;
+    }
+    .counter-blank button { color: var(--unset) !important; }
+    .counter-blank button:hover { background: var(--unset-bg); color: var(--unset) !important; }
+    .counter-blank input {
+      color: var(--unset) !important;
+      border-left-color: var(--unset-border) !important;
+      border-right-color: var(--unset-border) !important;
+    }
+
+    /* ── Cards grid — equal heights via subgrid rows ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      width: 100%;
+      background: var(--border);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    @media (max-width: 540px) { .grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 380px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      padding: 18px 18px 16px;
+      display: flex; flex-direction: column;
+    }
+    /* accent strip top */
+    .card { border-top: 3px solid transparent; }
+    .card.c-green  { border-top-color: var(--ok); }
+    .card.c-red    { border-top-color: var(--danger); }
+    .card.c-blue   { border-top-color: var(--info); }
+    .card.c-gold   { border-top-color: var(--warn); }
+    .card.c-purple { border-top-color: var(--cut); }
+    .card.c-teal   { border-top-color: var(--blank); }
+    .card.c-amber  { border-top-color: var(--unset); }
+
+    .card-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text3); margin-bottom: 8px;
+    }
+    .card-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: clamp(1.4rem, 4vw, 2.6rem); font-weight: 500; color: var(--text);
+      line-height: 1; letter-spacing: -0.03em;
+      flex: 1;
+    }
+    /* tint card-value per type */
+    .card.c-green  .card-value { color: var(--ok); }
+    .card.c-red    .card-value { color: var(--danger); }
+    .card.c-blue   .card-value { color: var(--info); }
+    .card.c-gold   .card-value { color: var(--warn); }
+    .card.c-purple .card-value { color: var(--cut); }
+    .card.c-teal   .card-value { color: var(--blank); }
+    .card.c-amber  .card-value { color: var(--unset); }
+
+    .card-sub {
+      font-size: 0.68rem; color: var(--text3);
+      font-family: 'IBM Plex Mono', monospace; margin-top: 5px;
+    }
+    .nota-badge {
+      display: inline-block; margin-top: 7px; padding: 2px 7px;
+      border-radius: var(--radius);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 500;
+      width: fit-content;
+    }
+
+    /* nota de corte inside card */
+    .cut-row {
+      display: flex; align-items: center; gap: 5px;
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .cut-row label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text3); white-space: nowrap;
+    }
+    .cut-input {
+      width: 64px; height: 26px; padding: 0 5px;
+      border: 1px solid var(--border2); border-radius: var(--radius);
+      background: var(--surface2);
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--text);
+      outline: none; -moz-appearance: textfield;
+    }
+    .cut-input::-webkit-outer-spin-button,
+    .cut-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .cut-input:focus { border-color: var(--text3); background: var(--surface); }
+    .cut-status {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.05em; padding: 2px 6px; border-radius: var(--radius);
+    }
+
+    /* ── Section label + divider ── */
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3);
+      align-self: flex-start; margin-bottom: 12px; margin-top: 2px;
+    }
+    .section-divider {
+      width: 100%; border: none; border-top: 1px solid var(--border); margin: 32px 0 28px;
+    }
+
+    /* ── Combined box ── */
+    .combined-box {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border2); border-radius: var(--radius-lg);
+      padding: 18px 24px;
+      display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    }
+    .cb-cell {
+      flex: 1; min-width: 100px; padding: 0 20px;
+      border-right: 1px solid var(--border);
+    }
+    .cb-cell:first-child { padding-left: 0; }
+    .cb-cell:last-child  { border-right: none; }
+    .cb-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px;
+    }
+    .cb-value {
+      font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem;
+      font-weight: 500; color: var(--text); letter-spacing: -0.03em;
+    }
+    .cb-sub { font-size: 0.63rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace; margin-top: 3px; }
+    .combined-box .cut-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+    /* ── Actions ── */
+    .actions { width: 100%; display: flex; justify-content: flex-start; margin-top: 24px; }
+    .reset-btn {
+      padding: 6px 14px; background: transparent;
+      border: 1px solid var(--border2); border-radius: var(--radius);
+      color: var(--text3); font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .reset-btn:hover { border-color: var(--danger); color: var(--danger); }
+  </style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('tab1')">Calculadora básica</button>
+  <button class="tab-btn"        onclick="switchTab('tab2')">Calculadora examen</button>
+</div>
+
+
+<!-- ══════════════════════════════
+     PESTAÑA 1
+     ══════════════════════════════ -->
+<div id="tab1" class="page active">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Calculadora básica</h1>
+      <p>Aciertos +1 · Fallos −<span id="t1-pen-label">1/4</span> · Nota sobre 70</p>
+    </div>
+    <button class="save-btn" title="Guardar" onclick="saveHTML()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 13H3a1 1 0 0 1-1-1V3l2-2h7.5L14 3.5V12a1 1 0 0 1-1 1Z"/>
+        <rect x="5" y="9" width="6" height="4" rx="0.5"/>
+        <rect x="5" y="1" width="5" height="3.5" rx="0.5"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="top-row">
+    <div class="penalty-bar">
+      <button class="pen-btn active" id="t1-btn-ss"  onclick="t1setPenalty(1/4)">Seguridad Social −¼</button>
+      <button class="pen-btn"        id="t1-btn-age" onclick="t1setPenalty(1/3)">Descuento AGE −⅓</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-item">
+      <label>Acertadas</label>
+      <div class="counter">
+        <button onclick="t1change('aciertos',-1)">−</button>
+        <input id="t1-aciertos" type="number" min="0" value="0" oninput="t1type('aciertos',this.value)">
+        <button onclick="t1change('aciertos', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>Falladas</label>
+      <div class="counter">
+        <button onclick="t1change('fallos',-1)">−</button>
+        <input id="t1-fallos" type="number" min="0" value="0" oninput="t1type('fallos',this.value)">
+        <button onclick="t1change('fallos', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>En blanco</label>
+      <div class="counter counter-blank">
+        <button onclick="t1change('blanco',-1)">−</button>
+        <input id="t1-blanco" type="number" min="0" value="0" oninput="t1type('blanco',this.value)">
+        <button onclick="t1change('blanco', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>Total preguntas</label>
+      <div class="counter">
+        <button onclick="t1change('total',-1)">−</button>
+        <input id="t1-total" type="number" min="1" value="100" oninput="t1type('total',this.value)">
+        <button onclick="t1change('total', 1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card c-green">
+      <div class="card-label">Acertadas</div>
+      <div class="card-value" id="t1-val-aciertos">0</div>
+      <div class="card-sub"   id="t1-sub-aciertos">+0,00 pts</div>
+    </div>
+    <div class="card c-red">
+      <div class="card-label">Falladas</div>
+      <div class="card-value" id="t1-val-fallos">0</div>
+      <div class="card-sub"   id="t1-sub-fallos">−0,00 pts</div>
+    </div>
+    <div class="card c-teal">
+      <div class="card-label">Sin asignar</div>
+      <div class="card-value" id="t1-val-blanco">100</div>
+      <div class="card-sub" id="t1-sub-blanco">preguntas libres · sin penalización</div>
+    </div>
+    <div class="card c-blue">
+      <div class="card-label">Resultado bruto</div>
+      <div class="card-value" id="t1-val-resultado">0,00</div>
+      <div class="card-sub">de <span id="t1-sub-total">100</span> preguntas</div>
+      <div class="cut-row">
+        <label>Corte bruto</label>
+        <input class="cut-input" id="t1-cut-bruto" type="number" min="0" step="0.01" placeholder="—"
+               oninput="t1syncCut('bruto',this.value)">
+        <span class="cut-status" id="t1-cut-bruto-st"></span>
+      </div>
+    </div>
+    <div class="card c-gold" style="grid-column: span 2;">
+      <div class="card-label">Nota sobre <input id="t1-escala" type="number" min="1" value="70" step="1" style="width:42px;height:20px;padding:0 4px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface2);font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text);outline:none;-moz-appearance:textfield;vertical-align:middle;" oninput="t1changeEscala(this.value)" title="Nota máxima editable"></div>
+      <div class="card-value" id="t1-val-nota">0,00</div>
+      <div class="card-sub">puntos sobre <span id="t1-sub-escala">70</span></div>
+      <div id="t1-badge" class="nota-badge"></div>
+      <div class="cut-row">
+        <label>Corte /<span id="t1-cut-escala-label">70</span></label>
+        <input class="cut-input" id="t1-cut-nota" type="number" min="0" step="0.01" placeholder="—"
+               oninput="t1syncCut('nota',this.value)">
+        <span class="cut-status" id="t1-cut-nota-st"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="reset-btn" onclick="t1reset()">Reiniciar</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     PESTAÑA 2
+     ══════════════════════════════ -->
+<div id="tab2" class="page">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Calculadora examen</h1>
+      <p>Dos partes · Cada parte sobre 50 · Aciertos +1 · Fallos −<span id="t2-pen-label">1/4</span></p>
+    </div>
+    <button class="save-btn" title="Guardar" onclick="saveHTML()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 13H3a1 1 0 0 1-1-1V3l2-2h7.5L14 3.5V12a1 1 0 0 1-1 1Z"/>
+        <rect x="5" y="9" width="6" height="4" rx="0.5"/>
+        <rect x="5" y="1" width="5" height="3.5" rx="0.5"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="top-row">
+    <div class="penalty-bar">
+      <button class="pen-btn active" id="t2-btn-ss"  onclick="t2setPenalty(1/4)">Seguridad Social −¼</button>
+      <button class="pen-btn"        id="t2-btn-age" onclick="t2setPenalty(1/3)">Descuento AGE −⅓</button>
+    </div>
+  </div>
+
+  <!-- PARTE A -->
+  <div class="section-label">Parte A</div>
+  <div class="controls">
+    <div class="ctrl-item">
+      <label>Acertadas</label>
+      <div class="counter">
+        <button onclick="t2change('A','aciertos',-1)">−</button>
+        <input id="t2A-aciertos" type="number" min="0" value="0" oninput="t2type('A','aciertos',this.value)">
+        <button onclick="t2change('A','aciertos', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>Falladas</label>
+      <div class="counter">
+        <button onclick="t2change('A','fallos',-1)">−</button>
+        <input id="t2A-fallos" type="number" min="0" value="0" oninput="t2type('A','fallos',this.value)">
+        <button onclick="t2change('A','fallos', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>En blanco</label>
+      <div class="counter counter-blank">
+        <button onclick="t2change('A','blanco',-1)">−</button>
+        <input id="t2A-blanco" type="number" min="0" value="0" oninput="t2type('A','blanco',this.value)">
+        <button onclick="t2change('A','blanco', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>Total preguntas</label>
+      <div class="counter">
+        <button onclick="t2change('A','total',-1)">−</button>
+        <input id="t2A-total" type="number" min="1" value="70" oninput="t2type('A','total',this.value)">
+        <button onclick="t2change('A','total', 1)">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card c-green">
+      <div class="card-label">Acertadas (A)</div>
+      <div class="card-value" id="t2A-val-aciertos">0</div>
+      <div class="card-sub"   id="t2A-sub-aciertos">+0,00 pts</div>
+    </div>
+    <div class="card c-red">
+      <div class="card-label">Falladas (A)</div>
+      <div class="card-value" id="t2A-val-fallos">0</div>
+      <div class="card-sub"   id="t2A-sub-fallos">−0,00 pts</div>
+    </div>
+    <div class="card c-teal">
+      <div class="card-label">Sin asignar (A)</div>
+      <div class="card-value" id="t2A-val-blanco">70</div>
+      <div class="card-sub" id="t2A-sub-blanco">preguntas libres · sin penalización</div>
+    </div>
+    <div class="card c-blue">
+      <div class="card-label">Resultado bruto (A)</div>
+      <div class="card-value" id="t2A-val-resultado">0,00</div>
+      <div class="card-sub">de <span id="t2A-sub-total">70</span> preguntas</div>
+      <div class="cut-row">
+        <label>Corte bruto</label>
+        <input class="cut-input" id="t2A-cut-bruto" type="number" min="0" step="0.01" placeholder="—"
+               oninput="t2syncCut('A','bruto',this.value)">
+        <span class="cut-status" id="t2A-cut-bruto-st"></span>
+      </div>
+    </div>
+    <div class="card c-purple" style="grid-column: span 2;">
+      <div class="card-label">Nota sobre <input id="t2A-escala" type="number" min="1" value="50" step="1" style="width:42px;height:20px;padding:0 4px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface2);font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text);outline:none;-moz-appearance:textfield;vertical-align:middle;" oninput="t2changeEscala('A',this.value)" title="Nota máxima editable"> (A)</div>
+      <div class="card-value" id="t2A-val-nota">0,00</div>
+      <div class="card-sub">puntos sobre <span id="t2A-sub-escala">50</span></div>
+      <div id="t2A-badge" class="nota-badge"></div>
+      <div class="cut-row">
+        <label>Corte /<span id="t2A-cut-escala-label">50</span></label>
+        <input class="cut-input" id="t2A-cut-nota" type="number" min="0" step="0.01" placeholder="—"
+               oninput="t2syncCut('A','nota',this.value)">
+        <span class="cut-status" id="t2A-cut-nota-st"></span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- PARTE B -->
+  <div class="section-label">Parte B</div>
+  <div class="controls">
+    <div class="ctrl-item">
+      <label>Acertadas</label>
+      <div class="counter">
+        <button onclick="t2change('B','aciertos',-1)">−</button>
+        <input id="t2B-aciertos" type="number" min="0" value="0" oninput="t2type('B','aciertos',this.value)">
+        <button onclick="t2change('B','aciertos', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>Falladas</label>
+      <div class="counter">
+        <button onclick="t2change('B','fallos',-1)">−</button>
+        <input id="t2B-fallos" type="number" min="0" value="0" oninput="t2type('B','fallos',this.value)">
+        <button onclick="t2change('B','fallos', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>En blanco</label>
+      <div class="counter counter-blank">
+        <button onclick="t2change('B','blanco',-1)">−</button>
+        <input id="t2B-blanco" type="number" min="0" value="0" oninput="t2type('B','blanco',this.value)">
+        <button onclick="t2change('B','blanco', 1)">+</button>
+      </div>
+    </div>
+    <div class="ctrl-item">
+      <label>Total preguntas</label>
+      <div class="counter">
+        <button onclick="t2change('B','total',-1)">−</button>
+        <input id="t2B-total" type="number" min="1" value="15" oninput="t2type('B','total',this.value)">
+        <button onclick="t2change('B','total', 1)">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="card c-green">
+      <div class="card-label">Acertadas (B)</div>
+      <div class="card-value" id="t2B-val-aciertos">0</div>
+      <div class="card-sub"   id="t2B-sub-aciertos">+0,00 pts</div>
+    </div>
+    <div class="card c-red">
+      <div class="card-label">Falladas (B)</div>
+      <div class="card-value" id="t2B-val-fallos">0</div>
+      <div class="card-sub"   id="t2B-sub-fallos">−0,00 pts</div>
+    </div>
+    <div class="card c-teal">
+      <div class="card-label">Sin asignar (B)</div>
+      <div class="card-value" id="t2B-val-blanco">15</div>
+      <div class="card-sub" id="t2B-sub-blanco">preguntas libres · sin penalización</div>
+    </div>
+    <div class="card c-blue">
+      <div class="card-label">Resultado bruto (B)</div>
+      <div class="card-value" id="t2B-val-resultado">0,00</div>
+      <div class="card-sub">de <span id="t2B-sub-total">15</span> preguntas</div>
+      <div class="cut-row">
+        <label>Corte bruto</label>
+        <input class="cut-input" id="t2B-cut-bruto" type="number" min="0" step="0.01" placeholder="—"
+               oninput="t2syncCut('B','bruto',this.value)">
+        <span class="cut-status" id="t2B-cut-bruto-st"></span>
+      </div>
+    </div>
+    <div class="card c-purple" style="grid-column: span 2;">
+      <div class="card-label">Nota sobre <input id="t2B-escala" type="number" min="1" value="50" step="1" style="width:42px;height:20px;padding:0 4px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface2);font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text);outline:none;-moz-appearance:textfield;vertical-align:middle;" oninput="t2changeEscala('B',this.value)" title="Nota máxima editable"> (B)</div>
+      <div class="card-value" id="t2B-val-nota">0,00</div>
+      <div class="card-sub">puntos sobre <span id="t2B-sub-escala">50</span></div>
+      <div id="t2B-badge" class="nota-badge"></div>
+      <div class="cut-row">
+        <label>Corte /<span id="t2B-cut-escala-label">50</span></label>
+        <input class="cut-input" id="t2B-cut-nota" type="number" min="0" step="0.01" placeholder="—"
+               oninput="t2syncCut('B','nota',this.value)">
+        <span class="cut-status" id="t2B-cut-nota-st"></span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="section-label">Total combinado</div>
+  <div class="combined-box">
+    <div class="cb-cell">
+      <div class="cb-label">Parte A / 50</div>
+      <div class="cb-value" id="comb-A">0,00</div>
+      <div class="cb-sub">puntos</div>
+      <div class="cut-row">
+        <label>Corte A</label>
+        <span class="cut-status" id="comb-cut-A-st"></span>
+      </div>
+    </div>
+    <div class="cb-cell">
+      <div class="cb-label">Parte B / 50</div>
+      <div class="cb-value" id="comb-B">0,00</div>
+      <div class="cb-sub">puntos</div>
+      <div class="cut-row">
+        <label>Corte B</label>
+        <span class="cut-status" id="comb-cut-B-st"></span>
+      </div>
+    </div>
+    <div class="cb-cell">
+      <div class="cb-label">Total / 100</div>
+      <div class="cb-value" id="comb-total">0,00</div>
+      <div class="cb-sub" id="comb-badge-text">—</div>
+      <div class="cut-row">
+        <label>Corte /100</label>
+        <input class="cut-input" id="comb-cut" type="number" min="0" step="0.01" placeholder="—"
+               oninput="combSyncCut(this.value)">
+        <span class="cut-status" id="comb-cut-st"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="reset-btn" onclick="t2reset()">Reiniciar</button>
+  </div>
+</div>
+
+
+<script>
+  /* ─── tab switching ─── */
+  function switchTab(id) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab-btn')[id==='tab1'?0:1].classList.add('active');
+  }
+
+  /* ─── save HTML with current state baked in ─── */
+  function saveHTML() {
+    const html = document.documentElement.outerHTML;
+    const blob = new Blob([html], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const d = new Date();
+    const ts = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+    a.download = `calculadora_examen_${ts}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  /* ─── helpers ─── */
+  const fmt = n => n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtFrac = p => Math.abs(p-1/4)<0.001 ? '1/4' : '1/3';
+
+  function setBadge(el, pct, val) {
+    let label,bg,col,border;
+    if      (pct>=0.9) {label='Sobresaliente';bg='var(--ok-bg)';col='var(--ok)';border='var(--ok-border)';}
+    else if (pct>=0.7) {label='Notable';      bg='var(--warn-bg)';col='var(--warn)';border='var(--warn-border)';}
+    else if (pct>=0.5) {label='Aprobado';     bg='var(--info-bg)';col='var(--info)';border='var(--info-border)';}
+    else if (val>0)    {label='Insuficiente'; bg='var(--danger-bg)';col='var(--danger)';border='var(--danger-border)';}
+    else               {label='—';           bg='transparent';col='var(--text3)';border='transparent';}
+    el.textContent=label; el.style.background=bg; el.style.color=col;
+    el.style.border=`1px solid ${border}`;
+  }
+
+  function setCutStatus(el, current, cutVal) {
+    if (cutVal===null||isNaN(cutVal)||cutVal==='') {
+      el.textContent=''; el.style.background=''; el.style.color=''; return;
+    }
+    const above = current >= cutVal;
+    el.textContent = above ? '▲ supera' : '▼ no llega';
+    el.style.background = above ? 'var(--ok-bg)' : 'var(--danger-bg)';
+    el.style.color      = above ? 'var(--ok)'    : 'var(--danger)';
+  }
+
+  /* ══════════ PESTAÑA 1 ══════════ */
+  const s1 = {aciertos:0,fallos:0,blanco:0,total:100,pen:1/4,escala:70,cutBruto:null,cutNota:null};
+
+  function t1setPenalty(v) {
+    s1.pen=v;
+    document.getElementById('t1-pen-label').textContent=fmtFrac(v);
+    const age=Math.abs(v-1/3)<0.001;
+    document.getElementById('t1-btn-ss').classList.toggle('active',!age);
+    document.getElementById('t1-btn-age').classList.toggle('active',age);
+    t1renderCards();
+  }
+
+  function t1changeEscala(val) {
+    const n = parseFloat(val);
+    if (!isNaN(n) && n >= 1) { s1.escala = n; }
+    t1renderCards();
+  }
+
+  function t1syncCut(source, rawVal) {
+    const v=parseFloat(rawVal);
+    if(isNaN(v)||rawVal==='') {
+      s1.cutBruto=null; s1.cutNota=null;
+      document.getElementById('t1-cut-bruto').value='';
+      document.getElementById('t1-cut-nota').value='';
+    } else if(source==='bruto') {
+      s1.cutBruto=v;
+      s1.cutNota=s1.total>0?(v/s1.total)*s1.escala:0;
+      document.getElementById('t1-cut-nota').value=fmt(s1.cutNota).replace(',','.');
+    } else {
+      s1.cutNota=v;
+      s1.cutBruto=s1.total>0?(v/s1.escala)*s1.total:0;
+      document.getElementById('t1-cut-bruto').value=fmt(s1.cutBruto).replace(',','.');
+    }
+    t1renderCards();
+  }
+
+  function t1clamp() {
+    const max = s1.total - s1.blanco;
+    if (s1.aciertos + s1.fallos > max) {
+      // Cap aciertos first, then fallos — never reduce a field below 0
+      // but don't steal from the other; just cap the sum at max
+      // We clamp only aciertos here since it's always the "last changed" in this path
+      // The real guard is in t1change/t1type which cap before storing
+    }
+  }
+
+  function t1autoCalc(changed) {
+    if (changed === 'blanco') return;
+    const other = changed === 'aciertos' ? 'fallos' : 'aciertos';
+    // Only auto-fill the other if it is still 0 (not manually set)
+    if (s1[other] === 0) {
+      const computed = s1.total - s1[changed] - s1.blanco;
+      if (computed >= 0) s1[other] = computed;
+    }
+    t1clamp();
+  }
+
+  function t1type(key,val) {
+    const n=parseInt(val,10); if(isNaN(n)||n<0) return;
+    if(key==='total') {
+      s1.total=Math.max(1,n);
+    } else {
+      const other = key==='aciertos'?'fallos':key==='fallos'?'aciertos':null;
+      const max = s1.total - s1.blanco - (other ? s1[other] : 0);
+      s1[key] = (key==='blanco') ? Math.min(n, s1.total - s1.aciertos - s1.fallos) : Math.min(n, Math.max(0, max));
+      if(!_wheelActive) t1autoCalc(key);
+    }
+    t1render();
+  }
+  function t1change(key,delta) {
+    const prev = s1[key];
+    s1[key]=Math.max(key==='total'?1:0, s1[key]+delta);
+    if(key!=='total') {
+      const other = key==='aciertos'?'fallos':key==='fallos'?'aciertos':null;
+      const max = s1.total - s1.blanco - (other ? s1[other] : 0);
+      if(key!=='blanco') s1[key] = Math.min(s1[key], Math.max(0, max));
+      else s1[key] = Math.min(s1[key], s1.total - s1.aciertos - s1.fallos);
+    }
+    t1render();
+  }
+  function t1reset() { s1.aciertos=0;s1.fallos=0;s1.blanco=0; t1render(); }
+
+  function t1render() {
+    document.getElementById('t1-aciertos').value=s1.aciertos;
+    document.getElementById('t1-fallos').value=s1.fallos;
+    document.getElementById('t1-blanco').value=s1.blanco;
+    document.getElementById('t1-total').value=s1.total;
+    t1renderCards();
+  }
+
+  function t1renderCards() {
+    const {aciertos,fallos,blanco,total,pen,escala}=s1;
+    const bruto=aciertos-fallos*pen;
+    const notaEscala=Math.max(0,total>0?(bruto/total)*escala:0);
+    const sinAsignar=Math.max(blanco, total-aciertos-fallos);
+
+    document.getElementById('t1-val-aciertos').textContent=aciertos;
+    document.getElementById('t1-sub-aciertos').textContent=`+${fmt(aciertos)} pts`;
+    document.getElementById('t1-val-fallos').textContent=fallos;
+    document.getElementById('t1-sub-fallos').textContent=`−${fmt(fallos*pen)} pts`;
+    document.getElementById('t1-val-blanco').textContent=sinAsignar;
+    document.getElementById('t1-sub-blanco').textContent=blanco>0?`mín. ${blanco} en blanco · sin penalización`:'preguntas libres · sin penalización';
+    document.getElementById('t1-val-resultado').textContent=fmt(bruto);
+    document.getElementById('t1-sub-total').textContent=total;
+    document.getElementById('t1-val-nota').textContent=fmt(notaEscala);
+    document.getElementById('t1-sub-escala').textContent=escala;
+    document.getElementById('t1-cut-escala-label').textContent=escala;
+    setBadge(document.getElementById('t1-badge'),total>0?bruto/total:0,bruto);
+    setCutStatus(document.getElementById('t1-cut-bruto-st'),bruto,s1.cutBruto);
+    setCutStatus(document.getElementById('t1-cut-nota-st'),notaEscala,s1.cutNota);
+  }
+
+  /* ══════════ PESTAÑA 2 ══════════ */
+  const s2={
+    A:{aciertos:0,fallos:0,blanco:0,total:70,escala:50,cutBruto:null,cutNota:null},
+    B:{aciertos:0,fallos:0,blanco:0,total:15,escala:50,cutBruto:null,cutNota:null},
+    pen:1/4, cutTotal:null
+  };
+
+  function t2setPenalty(v) {
+    s2.pen=v;
+    document.getElementById('t2-pen-label').textContent=fmtFrac(v);
+    const age=Math.abs(v-1/3)<0.001;
+    document.getElementById('t2-btn-ss').classList.toggle('active',!age);
+    document.getElementById('t2-btn-age').classList.toggle('active',age);
+    // Ajustar total parte B según convocatoria
+    s2.B.total = age ? 20 : 15;
+    t2render();
+  }
+
+  function t2changeEscala(part, val) {
+    const n = parseFloat(val);
+    if (!isNaN(n) && n >= 1) { s2[part].escala = n; }
+    t2renderCards();
+  }
+
+  function t2syncCut(part,source,rawVal) {
+    const v=parseFloat(rawVal);
+    if(isNaN(v)||rawVal==='') {
+      s2[part].cutBruto=null; s2[part].cutNota=null;
+      document.getElementById(`t2${part}-cut-bruto`).value='';
+      document.getElementById(`t2${part}-cut-nota`).value='';
+    } else if(source==='bruto') {
+      s2[part].cutBruto=v;
+      s2[part].cutNota=s2[part].total>0?(v/s2[part].total)*s2[part].escala:0;
+      document.getElementById(`t2${part}-cut-nota`).value=fmt(s2[part].cutNota).replace(',','.');
+    } else {
+      s2[part].cutNota=v;
+      s2[part].cutBruto=s2[part].total>0?(v/s2[part].escala)*s2[part].total:0;
+      document.getElementById(`t2${part}-cut-bruto`).value=fmt(s2[part].cutBruto).replace(',','.');
+    }
+    t2renderCards();
+  }
+
+  function combSyncCut(rawVal) {
+    const v=parseFloat(rawVal);
+    s2.cutTotal = (isNaN(v)||rawVal==='')?null:v;
+    t2renderCards();
+  }
+
+  function t2clamp(part) {
+    // Clamping now handled inline in t2type/t2change
+  }
+
+  function t2autoCalc(part, changed) {
+    if (changed === 'blanco') return;
+    const p = s2[part];
+    const other = changed === 'aciertos' ? 'fallos' : 'aciertos';
+    if (p[other] === 0) {
+      const computed = p.total - p[changed] - p.blanco;
+      if (computed >= 0) p[other] = computed;
+    }
+  }
+
+  function t2type(part,key,val) {
+    const n=parseInt(val,10); if(isNaN(n)||n<0) return;
+    const p=s2[part];
+    if(key==='total') {
+      p.total=Math.max(1,n);
+    } else {
+      const other = key==='aciertos'?'fallos':key==='fallos'?'aciertos':null;
+      const max = p.total - p.blanco - (other ? p[other] : 0);
+      p[key] = (key==='blanco') ? Math.min(n, p.total - p.aciertos - p.fallos) : Math.min(n, Math.max(0, max));
+      if(!_wheelActive) t2autoCalc(part, key);
+    }
+    t2render();
+  }
+  function t2change(part,key,delta) {
+    const p=s2[part];
+    p[key]=Math.max(key==='total'?1:0, p[key]+delta);
+    if(key!=='total') {
+      const other = key==='aciertos'?'fallos':key==='fallos'?'aciertos':null;
+      const max = p.total - p.blanco - (other ? p[other] : 0);
+      if(key!=='blanco') p[key] = Math.min(p[key], Math.max(0, max));
+      else p[key] = Math.min(p[key], p.total - p.aciertos - p.fallos);
+    }
+    t2render();
+  }
+  function t2reset() {
+    ['A','B'].forEach(p=>{s2[p].aciertos=0;s2[p].fallos=0;s2[p].blanco=0;});
+    t2render();
+  }
+  function t2render() {
+    ['A','B'].forEach(p=>{
+      document.getElementById(`t2${p}-aciertos`).value=s2[p].aciertos;
+      document.getElementById(`t2${p}-fallos`).value=s2[p].fallos;
+      document.getElementById(`t2${p}-blanco`).value=s2[p].blanco;
+      document.getElementById(`t2${p}-total`).value=s2[p].total;
+    });
+    t2renderCards();
+  }
+  function t2renderCards() {
+    const pen=s2.pen;
+    ['A','B'].forEach(p=>{
+      const {aciertos,fallos,blanco,total,escala}=s2[p];
+      const bruto=aciertos-fallos*pen;
+      const notaEscala=Math.max(0,total>0?(bruto/total)*escala:0);
+      const sinAsignar=Math.max(blanco, total-aciertos-fallos);
+
+      document.getElementById(`t2${p}-val-aciertos`).textContent=aciertos;
+      document.getElementById(`t2${p}-sub-aciertos`).textContent=`+${fmt(aciertos)} pts`;
+      document.getElementById(`t2${p}-val-fallos`).textContent=fallos;
+      document.getElementById(`t2${p}-sub-fallos`).textContent=`−${fmt(fallos*pen)} pts`;
+      document.getElementById(`t2${p}-val-blanco`).textContent=sinAsignar;
+      document.getElementById(`t2${p}-sub-blanco`).textContent=blanco>0?`mín. ${blanco} en blanco · sin penalización`:'preguntas libres · sin penalización';
+      document.getElementById(`t2${p}-val-resultado`).textContent=fmt(bruto);
+      document.getElementById(`t2${p}-sub-total`).textContent=total;
+      document.getElementById(`t2${p}-val-nota`).textContent=fmt(notaEscala);
+      document.getElementById(`t2${p}-sub-escala`).textContent=escala;
+      document.getElementById(`t2${p}-cut-escala-label`).textContent=escala;
+      setBadge(document.getElementById(`t2${p}-badge`),total>0?bruto/total:0,bruto);
+      setCutStatus(document.getElementById(`t2${p}-cut-bruto-st`),bruto,s2[p].cutBruto);
+      setCutStatus(document.getElementById(`t2${p}-cut-nota-st`),notaEscala,s2[p].cutNota);
+    });
+
+    const notaA=Math.max(0,s2.A.total>0?(s2.A.aciertos-s2.A.fallos*pen)/s2.A.total*s2.A.escala:0);
+    const notaB=Math.max(0,s2.B.total>0?(s2.B.aciertos-s2.B.fallos*pen)/s2.B.total*s2.B.escala:0);
+    const tot=notaA+notaB;
+
+    document.getElementById('comb-A').textContent=fmt(notaA);
+    document.getElementById('comb-B').textContent=fmt(notaB);
+    document.getElementById('comb-total').textContent=fmt(tot);
+
+    const pct=tot/100;
+    let label;
+    if(pct>=0.9)  label='Sobresaliente';
+    else if(pct>=0.7) label='Notable';
+    else if(pct>=0.5) label='Aprobado';
+    else if(tot>0)    label='Insuficiente';
+    else              label='—';
+    document.getElementById('comb-badge-text').textContent=label+' · /100';
+
+    // Mirror cut scores from parts into combined cells
+    setCutStatus(document.getElementById('comb-cut-A-st'), notaA, s2.A.cutNota);
+    setCutStatus(document.getElementById('comb-cut-B-st'), notaB, s2.B.cutNota);
+
+    // Sum of part cut scores → auto-fill /100 cut field
+    const cutA = s2.A.cutNota;
+    const cutB = s2.B.cutNota;
+    if (cutA !== null && cutB !== null) {
+      const sumCut = cutA + cutB;
+      s2.cutTotal = sumCut;
+      document.getElementById('comb-cut').value = fmt(sumCut).replace(',','.');
+    } else if (cutA !== null || cutB !== null) {
+      // only one set — keep whatever was manually entered or null
+    }
+    setCutStatus(document.getElementById('comb-cut-st'), tot, s2.cutTotal);
+  }
+
+  t1render();
+  t2render();
+
+  // Mousewheel on all counter inputs (including blank fields)
+  let _wheelActive = false;
+  document.querySelectorAll('.counter input').forEach(inp => {
+    inp.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1 : -1;
+      const cur = parseInt(this.value, 10) || 0;
+      const min = parseInt(this.min ?? '0', 10);
+      this.value = Math.max(min, cur + delta);
+      _wheelActive = true;
+      this.dispatchEvent(new Event('input', {bubbles: true}));
+      _wheelActive = false;
+    }, {passive: false});
+  });
+
+  // Mousewheel on escala input
+  const escalaEl = document.getElementById('t1-escala');
+  if (escalaEl) {
+    escalaEl.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1 : -1;
+      const cur = parseFloat(this.value) || 70;
+      this.value = Math.max(1, cur + delta);
+      this.dispatchEvent(new Event('input', {bubbles: true}));
+    }, {passive: false});
+  }
+
+  // Mousewheel on escala inputs (tab2)
+  ['t2A-escala','t2B-escala'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 1 : -1;
+      const cur = parseFloat(this.value) || 50;
+      this.value = Math.max(1, cur + delta);
+      this.dispatchEvent(new Event('input', {bubbles: true}));
+    }, {passive: false});
+  });
+  const styleExtra = document.createElement('style');
+  styleExtra.textContent = '#t1-escala::-webkit-outer-spin-button,#t1-escala::-webkit-inner-spin-button,#t2A-escala::-webkit-outer-spin-button,#t2A-escala::-webkit-inner-spin-button,#t2B-escala::-webkit-outer-spin-button,#t2B-escala::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}#t1-escala,#t2A-escala,#t2B-escala{-moz-appearance:textfield;}';
+  document.head.appendChild(styleExtra);
+</script>
+</body>
+</html>
